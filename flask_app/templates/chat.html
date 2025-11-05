@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+             <div class="logo-div"><img src="https://pandas.pydata.org/static/img/pandas_white.svg" class="logo"></div>
+             <div class="header">Helper</div>
+        </div>
+        <div id="chatbox">
+            <div id="chat-log"></div>
+        </div>
+        <div id="loading-indicator" class="hidden">
+            <div class="loader"></div>
+        </div>
+        <form id="chat-form" action="/chat" method="POST">
+            <input type="text" id="message" name="message" placeholder="Type a message..." autocomplete="off"  class="form" required>
+            <button type="submit"  class="form">Send</button>
+            <button type="button" id="clear-chat"  class="form">Clear</button>
+        </form>
+    </div>
+    <script>
+        function isValidSentence(sentence) {
+            // Basic validation to check if the input contains only letters and spaces
+            const regex = /^[a-zA-Z\s.,!?;:'"-]+$/;
+            return regex.test(sentence) && sentence.trim().split(' ').length > 1;
+        }
+        
+        function transformMessage(sentence) {
+            // Transformation of the message/query if it contains two words
+            const words = sentence.trim().split(' ');
+            if (words.length === 2) {
+                return `What is ${sentence}?`;
+            }
+            return sentence;
+        }
+        
+        function scrollToBottom() {
+            const chatLog = document.getElementById('chat-log');
+            console.log('Scroll Height:', chatLog.scrollHeight);
+            console.log('Scroll Top:', chatLog.scrollTop);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            console.log('New Scroll Top:', chatLog.scrollTop);
+        }
+        
+        document.getElementById('chat-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const messageInput = document.getElementById('message');
+            let message = messageInput.value;
+            
+            if (!isValidSentence(message)) {
+                alert("Please enter a meaningful query.");
+                messageInput.value = '';
+                return;
+            }
+            
+            message = transformMessage(message);
+            messageInput.value = '';
+
+            const loadingIndicator = document.getElementById('loading-indicator');
+            loadingIndicator.classList.remove('hidden');
+            
+            fetch('/chat', {
+                method: 'POST',
+                body: new URLSearchParams('message=' + message),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingIndicator.classList.add('hidden');
+                const chatLog = document.getElementById('chat-log');
+                chatLog.innerHTML += `<div class="user-message"><strong>You:</strong> ${message}</div>`;
+                chatLog.innerHTML += `<div class="bot-response"><strong>PandaBot:</strong> ${data.response}</div>`;
+                setTimeout(scrollToBottom, 0);
+            });
+        });
+
+        document.getElementById('clear-chat').addEventListener('click', function() {
+            const chatLog = document.getElementById('chat-log');
+            chatLog.innerHTML = '';
+            setTimeout(scrollToBottom, 0);
+        });
+    </script>
+</body>
+</html>
